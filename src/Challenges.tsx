@@ -5,22 +5,21 @@ import { MyMove } from "./App";
 import { PanelInstance } from "./LeftPanel";
 import CloseIcon from '@mui/icons-material/Close'
 import DoneIcon from '@mui/icons-material/Done';
-import { createChallenges } from "./Challenger";
+import { createChallenges, MoveScore } from "./Challenger";
 export enum Reward {
     Pawn, Queen, Win
 }
 
-const demoChallenge: Challenge = {
-    name: "Best Move",
-    reward: Reward.Pawn,
-    mandatory: "optional",
-    description: "Play the best move in this position",
-    checkChallenge: (m) => {
-        return typeof m !== "string" && m.from === "e2" && m.to === "e4"
-    },
-    status: "possible",
-    ttp: "Turn"
-}
+// const demoChallenge: Challenge = {
+//     name: "Best Move",
+//     mandatory: "optional",
+//     description: "Play the best move in this position",
+//     checkChallenge: (m) => {
+//         return typeof m !== "string" && m.from === "e2" && m.to === "e4"
+//     },
+//     status: "possible",
+//     ttp: "Turn"
+// }
 
 
 type Props = {}
@@ -30,7 +29,7 @@ export default class Challenges extends React.Component<Props, { challenges: Cha
         super(props);
     }
     componentDidMount(): void {
-        this.setState({ challenges: [demoChallenge] })
+        // this.setState({ challenges: [demoChallenge] })
     }
     createChallenges(position: Chess) {
         console.log('about to fetch challenges');
@@ -51,18 +50,31 @@ export default class Challenges extends React.Component<Props, { challenges: Cha
 }
 
 export type TimeToPlay = "Turn" | "Game" | "10 moves";
-export type CheckChallenge = MyMove | ((move: MyMove) => boolean) | MyMove[] | string;
-export interface Challenge {
+
+export type ChallengeTerms = {
+    challengeType: "any option" | "dynamic relative to best option";
+    /**
+     * an array of the correct moves
+     */
+    correctMoves: MoveOption[];
+};
+export type MoveOption = MoveScore;
+export interface Challenge extends PartialChallenge {
+    calculateReward: (movePlayed: MyMove) => number;
+
+}export interface PartialChallenge {
     name: string;
     description: string;
-    reward: Reward;
     mandatory: "mandatory" | "optional" | "accepted";
     ttp: TimeToPlay;
-    checkChallenge: CheckChallenge;
-    status: "possible" | "fail" | "success",
+    checkChallenge: ChallengeTerms;
+    status: "possible" | "fail" | "success";
+
     onFinish?: (c: Challenge) => void;
 }
-
+export function equals(m1: MyMove, m2: string) {
+    return convertMoveToStr(m1) === m2;
+}
 export function checkChallenge(challenges: Challenge[], move: MyMove, newPosition: Chess, isGameOver: boolean) {
     challenges.forEach(c => {
         if (c.status === "possible") {
@@ -90,16 +102,7 @@ export function checkChallenge(challenges: Challenge[], move: MyMove, newPositio
     })
     function eachChallenge(challenge: Challenge): boolean | "still possible" {
         const currentCheck = () => {
-            if (typeof challenge.checkChallenge === "function") {
-                return challenge.checkChallenge(move);
-            }
-            if (typeof challenge.checkChallenge === "string") {
-
-                const retting = challenge.checkChallenge === convertMoveToStr(move);
-                console.log('challenge', challenge.checkChallenge, 'move', move, convertMoveToStr(move), 'equal?', retting);
-                return retting;
-            }
-            return Array.isArray(challenge.checkChallenge) ? (!!challenge.checkChallenge.find(m => m === move)) : challenge.checkChallenge === move
+            return challenge.checkChallenge.correctMoves.find(m => equals(move, m.move.move));
         }
         if (currentCheck()) return true;
 
@@ -162,9 +165,9 @@ export const ChallengeComponent = forwardRef<ChallengeActions, ChallengeProps>((
 
                         <CardContent>
                             {icon && <Avatar>{icon}</Avatar>}
-                            <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
+                            {/* <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
                                 Stakes: {Reward[challenge.reward]}
-                            </Typography>
+                            </Typography> */}
                             <Typography variant="h5" component="div">
                                 {challenge.name}
                             </Typography>
@@ -175,7 +178,7 @@ export const ChallengeComponent = forwardRef<ChallengeActions, ChallengeProps>((
                             <Typography variant="body2">
                                 {challenge.description}
                             </Typography>
-                            <h1>{typeof challenge.checkChallenge !== "function" ? challenge.checkChallenge as string : "sry bud"}</h1>
+                            <pre>{JSON.stringify(challenge.checkChallenge, null, 2)}</pre>
                         </CardContent>
                     </Tooltip>
                     {isAccepted ||

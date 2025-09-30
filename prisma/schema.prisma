@@ -1,0 +1,217 @@
+// Prisma schema for Computer Chess Next.js application
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - supports both registered users and guests
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String?   @unique
+  passwordHash  String?
+  isGuest       Boolean   @default(false)
+
+  // Relations
+  gamesAsWhite  Game[]    @relation("WhitePlayer")
+  gamesAsBlack  Game[]    @relation("BlackPlayer")
+  challenges    ChallengeResult[]
+  sessions      Session[]
+  accounts      Account[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([username])
+  @@index([email])
+}
+
+// NextAuth Account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+// NextAuth Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// NextAuth VerificationToken model
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Game model - represents a chess game between two players
+model Game {
+  id              String      @id @default(cuid())
+  whitePlayerId   String
+  blackPlayerId   String
+  whitePlayer     User        @relation("WhitePlayer", fields: [whitePlayerId], references: [id])
+  blackPlayer     User        @relation("BlackPlayer", fields: [blackPlayerId], references: [id])
+
+  status          GameStatus  @default(IN_PROGRESS)
+  result          GameResult?
+  winnerId        String?
+
+  initialFen      String      @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+  currentFen      String
+  moves           Move[]
+
+  whiteScore      Int         @default(0)
+  blackScore      Int         @default(0)
+
+  startedAt       DateTime    @default(now())
+  endedAt         DateTime?
+  lastActivityAt  DateTime    @default(now())
+
+  @@index([whitePlayerId])
+  @@index([blackPlayerId])
+  @@index([status])
+  @@index([lastActivityAt])
+}
+
+// Move model - represents a single chess move in a game
+model Move {
+  id              String      @id @default(cuid())
+  gameId          String
+  game            Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  moveNumber      Int
+  from            String      // e.g., "e2"
+  to              String      // e.g., "e4"
+  promotion       String?     // e.g., "q" for queen
+
+  fenAfterMove    String
+  evaluationCp    Int?        // Stockfish evaluation in centipawns
+
+  createdAt       DateTime    @default(now())
+
+  @@index([gameId, moveNumber])
+}
+
+// Challenge model - predefined challenge types
+model Challenge {
+  id              String            @id @default(cuid())
+  name            String
+  description     String
+  challengeType   ChallengeType
+
+  results         ChallengeResult[]
+
+  createdAt       DateTime          @default(now())
+
+  @@index([challengeType])
+}
+
+// ChallengeResult model - tracks challenge attempts by users in games
+model ChallengeResult {
+  id              String            @id @default(cuid())
+  gameId          String
+  challengeId     String
+  challenge       Challenge         @relation(fields: [challengeId], references: [id])
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+
+  status          ChallengeStatus
+  pointsAwarded   Int
+  moveNumber      Int
+
+  createdAt       DateTime          @default(now())
+
+  @@index([gameId])
+  @@index([userId])
+  @@index([challengeId])
+}
+
+// MatchQueue model - manages matchmaking queue
+model MatchQueue {
+  id              String      @id @default(cuid())
+  userId          String      @unique
+
+  createdAt       DateTime    @default(now())
+  expiresAt       DateTime
+
+  @@index([expiresAt])
+}
+
+// PendingChallenge model - friend challenges awaiting acceptance
+model PendingChallenge {
+  id              String      @id @default(cuid())
+  challengerId    String
+  challengedId    String
+  challengerColor String      // "white" or "black" - chosen by challenger
+
+  status          PendingChallengeStatus @default(PENDING)
+  gameId          String?
+
+  createdAt       DateTime    @default(now())
+  expiresAt       DateTime
+
+  @@index([challengedId, status])
+  @@index([challengerId])
+  @@index([expiresAt])
+}
+
+// Enums
+enum GameStatus {
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum GameResult {
+  WHITE_WIN
+  BLACK_WIN
+  DRAW
+  ABANDONED
+}
+
+enum ChallengeType {
+  BEST_MOVE
+  WORST_MOVE
+  BEST_KNIGHT_MOVE
+}
+
+enum ChallengeStatus {
+  POSSIBLE
+  SUCCESS
+  FAIL
+}
+
+enum PendingChallengeStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}

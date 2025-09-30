@@ -16,6 +16,16 @@ model User {
   passwordHash  String?
   isGuest       Boolean   @default(false)
 
+  // Progression stats
+  totalXP       Int       @default(0)
+  rank          Rank      @default(NOVICE)
+  gamesPlayed   Int       @default(0)
+  gamesWon      Int       @default(0)
+  totalPoints   Int       @default(0)
+  challengesCompleted Int @default(0)
+  longestStreak Int       @default(0)
+  bestCombo     Int       @default(0)
+
   // Relations
   gamesAsWhite  Game[]    @relation("WhitePlayer")
   gamesAsBlack  Game[]    @relation("BlackPlayer")
@@ -28,6 +38,8 @@ model User {
 
   @@index([username])
   @@index([email])
+  @@index([rank])
+  @@index([totalXP])
 }
 
 // NextAuth Account model
@@ -83,12 +95,26 @@ model Game {
   result          GameResult?
   winnerId        String?
 
+  // AI game fields
+  isAIGame        Boolean     @default(false)
+  aiDifficulty    AIDifficulty?
+  playerColor     String?     // 'white' or 'black' for AI games
+
   initialFen      String      @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
   currentFen      String
   moves           Move[]
 
   whiteScore      Int         @default(0)
   blackScore      Int         @default(0)
+  whiteXpEarned   Int         @default(0)
+  blackXpEarned   Int         @default(0)
+  whiteLongestStreak Int      @default(0)
+  blackLongestStreak Int      @default(0)
+  whiteChallengesCompleted Int @default(0)
+  blackChallengesCompleted Int @default(0)
+
+  challengeCompletions ChallengeCompletion[]
+  gameResult      GameResult_V2?
 
   startedAt       DateTime    @default(now())
   endedAt         DateTime?
@@ -98,6 +124,7 @@ model Game {
   @@index([blackPlayerId])
   @@index([status])
   @@index([lastActivityAt])
+  @@index([isAIGame])
 }
 
 // Move model - represents a single chess move in a game
@@ -151,6 +178,64 @@ model ChallengeResult {
   @@index([gameId])
   @@index([userId])
   @@index([challengeId])
+}
+
+// ChallengeCompletion model - detailed per-turn challenge tracking
+model ChallengeCompletion {
+  id                String          @id @default(cuid())
+  gameId            String
+  game              Game            @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  playerId          String
+  moveNumber        Int
+
+  challengeName     String
+  challengeType     String
+  difficulty        Difficulty
+
+  completed         Boolean
+  pointsAwarded     Int             @default(0)
+  streakCount       Int             @default(0)
+  comboSize         Int             @default(0)
+
+  createdAt         DateTime        @default(now())
+
+  @@index([gameId])
+  @@index([playerId])
+  @@index([moveNumber])
+}
+
+// GameResult_V2 model - comprehensive end-of-game stats
+model GameResult_V2 {
+  id                        String   @id @default(cuid())
+  gameId                    String   @unique
+  game                      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  winnerId                  String?
+
+  // White player stats
+  whitePoints               Int      @default(0)
+  whiteXP                   Int      @default(0)
+  whiteChallengesPresented  Int      @default(0)
+  whiteChallengesCompleted  Int      @default(0)
+  whiteLongestStreak        Int      @default(0)
+  whiteBestCombo            Int      @default(0)
+  whiteCompletionRate       Float    @default(0)
+
+  // Black player stats
+  blackPoints               Int      @default(0)
+  blackXP                   Int      @default(0)
+  blackChallengesPresented  Int      @default(0)
+  blackChallengesCompleted  Int      @default(0)
+  blackLongestStreak        Int      @default(0)
+  blackBestCombo            Int      @default(0)
+  blackCompletionRate       Float    @default(0)
+
+  createdAt                 DateTime @default(now())
+
+  @@index([winnerId])
+  @@index([whitePoints])
+  @@index([blackPoints])
 }
 
 // MatchQueue model - manages matchmaking queue
@@ -214,4 +299,29 @@ enum PendingChallengeStatus {
   ACCEPTED
   DECLINED
   EXPIRED
+}
+
+enum Rank {
+  NOVICE
+  AMATEUR
+  CLUB_PLAYER
+  EXPERT
+  CANDIDATE_MASTER
+  MASTER
+  GRANDMASTER
+  WORLD_CLASS
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
+}
+
+enum AIDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  MASTER
 }

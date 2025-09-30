@@ -4,6 +4,8 @@
  * Manages Stockfish Web Worker pool for move analysis and challenge generation.
  */
 
+export type AIDifficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'MASTER';
+
 export interface MoveScore {
   move: string;
   cp: number;
@@ -13,6 +15,14 @@ export interface MovesAnalysis {
   moves: Map<string, MoveScore>;
   sorted: MoveScore[];
 }
+
+// AI difficulty settings for Stockfish
+const AI_SETTINGS: Record<AIDifficulty, { skillLevel: number; depth: number; thinkTime: number }> = {
+  BEGINNER: { skillLevel: 1, depth: 5, thinkTime: 100 },
+  INTERMEDIATE: { skillLevel: 7, depth: 10, thinkTime: 500 },
+  ADVANCED: { skillLevel: 15, depth: 15, thinkTime: 1000 },
+  MASTER: { skillLevel: 20, depth: 20, thinkTime: 2000 },
+};
 
 class StockfishWorkerManager {
   private workers: Worker[] = [];
@@ -186,6 +196,54 @@ class StockfishWorkerManager {
   }
 
   /**
+   * Get AI move based on difficulty level
+   */
+  async getAIMove(fen: string, difficulty: AIDifficulty): Promise<string> {
+    const settings = AI_SETTINGS[difficulty];
+
+    return new Promise((resolve, reject) => {
+      const worker = this.createWorker();
+      let bestMove: string | null = null;
+
+      const timeout = setTimeout(() => {
+        worker.terminate();
+        reject(new Error('AI move calculation timed out'));
+      }, settings.thinkTime * 3);
+
+      worker.onmessage = (event: MessageEvent) => {
+        const message = event.data as string;
+
+        if (message.includes('bestmove')) {
+          clearTimeout(timeout);
+          const match = message.match(/bestmove ([a-h][1-8][a-h][1-8][qrbn]?)/);
+          if (match) {
+            bestMove = match[1];
+          }
+          worker.terminate();
+
+          if (bestMove) {
+            resolve(bestMove);
+          } else {
+            reject(new Error('No AI move found'));
+          }
+        }
+      };
+
+      worker.onerror = (error) => {
+        clearTimeout(timeout);
+        worker.terminate();
+        reject(error);
+      };
+
+      // Configure Stockfish for AI difficulty
+      worker.postMessage('uci');
+      worker.postMessage(`setoption name Skill Level value ${settings.skillLevel}`);
+      worker.postMessage(`position fen ${fen}`);
+      worker.postMessage(`go depth ${settings.depth} movetime ${settings.thinkTime}`);
+    });
+  }
+
+  /**
    * Cleanup all workers
    */
   terminate() {
@@ -204,6 +262,7 @@ export function getStockfishManager(): StockfishWorkerManager {
       analyzeMoves: async () => ({ moves: new Map(), sorted: [] }),
       analyzeMove: async (fen, move) => ({ move, cp: 0 }),
       getBestMove: async () => '',
+      getAIMove: async () => '',
       terminate: () => {},
     } as StockfishWorkerManager;
   }

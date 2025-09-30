@@ -33,28 +33,24 @@ Quick reference checklist for deploying Computer Chess to production.
 
 ---
 
-## Vercel Deployment
+## Production Deployment
 
-### 1. Initial Setup
-- [ ] Install Vercel CLI: `npm install -g vercel`
-- [ ] Login: `vercel login`
+### 1. Choose Your Hosting Provider
+Select a Node.js hosting provider (examples: Vercel, Railway, Render, Heroku, DigitalOcean)
+
+- [ ] Create account with chosen provider
+- [ ] Install provider's CLI (if available)
 - [ ] Navigate to project: `cd computer-chess-next`
 
-### 2. Deploy Preview
-- [ ] Run: `vercel`
-- [ ] Choose project settings (or create new)
-- [ ] Note preview URL
-- [ ] Test preview deployment
-
-### 3. Environment Variables
-Add in Vercel dashboard (Settings > Environment Variables):
+### 2. Configure Environment Variables
+Add these variables in your hosting provider's dashboard or configuration:
 
 **Database:**
 - [ ] `DATABASE_URL` = Your production database URL
 
 **NextAuth:**
 - [ ] `NEXTAUTH_SECRET` = Generated secret (openssl)
-- [ ] `NEXTAUTH_URL` = `https://your-app.vercel.app`
+- [ ] `NEXTAUTH_URL` = Your production URL (e.g., `https://your-app.com`)
 
 **Pusher Server:**
 - [ ] `PUSHER_APP_ID` = From Pusher dashboard
@@ -65,6 +61,13 @@ Add in Vercel dashboard (Settings > Environment Variables):
 **Pusher Client:**
 - [ ] `NEXT_PUBLIC_PUSHER_KEY` = Same as PUSHER_KEY
 - [ ] `NEXT_PUBLIC_PUSHER_CLUSTER` = Same as PUSHER_CLUSTER
+
+### 3. Build Configuration
+Ensure your hosting provider uses these commands:
+
+- **Build Command:** `npm run build` or `prisma generate && next build`
+- **Start Command:** `npm start`
+- **Node Version:** 20.x or higher
 
 ### 4. Database Migration
 ```bash
@@ -83,8 +86,9 @@ npx prisma studio
 - [ ] Verify tables created
 - [ ] (Optional) Seed test users
 
-### 5. Production Deployment
-- [ ] Run: `vercel --prod`
+### 5. Deploy to Production
+Follow your hosting provider's deployment process:
+- [ ] Deploy application
 - [ ] Wait for build to complete
 - [ ] Note production URL
 - [ ] Check deployment logs
@@ -143,11 +147,11 @@ npx prisma studio
 
 ## Monitoring Setup
 
-### Vercel Dashboard
-- [ ] Open project in Vercel dashboard
+### Hosting Provider Dashboard
+- [ ] Open project in hosting dashboard
 - [ ] Bookmark deployment URL
 - [ ] Enable email notifications (optional)
-- [ ] Check "Analytics" tab
+- [ ] Check analytics/metrics section
 
 **Monitor:**
 - Deployment status
@@ -179,8 +183,7 @@ npx prisma studio
 
 ### Deployment Failed
 ```bash
-# Check build logs
-vercel logs
+# Check build logs (via hosting provider dashboard)
 
 # Rebuild locally
 npm run build
@@ -233,7 +236,7 @@ npm run lint
 ## Performance Optimization
 
 ### Initial Launch
-- [ ] Enable Vercel Analytics (optional, paid)
+- [ ] Set up analytics tracking (optional)
 - [ ] Set up Sentry error tracking (optional)
 - [ ] Monitor Pusher usage
 - [ ] Check database query performance
@@ -251,16 +254,11 @@ npm run lint
 
 If deployment has critical issues:
 
-### Via Vercel CLI
-```bash
-vercel rollback
-```
-
-### Via Dashboard
+### Via Hosting Provider
+Consult your hosting provider's documentation for rollback procedures. Most providers support:
 1. Go to Deployments tab
 2. Find previous working deployment
-3. Click "..." menu
-4. Select "Promote to Production"
+3. Revert or promote that deployment to production
 
 ### Database Rollback
 ```bash
@@ -273,10 +271,9 @@ npx prisma migrate resolve --rolled-back <migration-name>
 ## Custom Domain (Optional)
 
 ### Setup
-1. Go to Vercel project settings
-2. Click "Domains"
-3. Add custom domain
-4. Follow DNS configuration instructions
+1. Go to your hosting provider's domain settings
+2. Add custom domain
+3. Follow DNS configuration instructions provided by your host
 
 ### Update Environment
 - [ ] Update NEXTAUTH_URL to custom domain
@@ -295,7 +292,7 @@ npx prisma migrate resolve --rolled-back <migration-name>
 - [ ] Gather user feedback
 
 ### First Week
-- [ ] Review Vercel analytics
+- [ ] Review analytics
 - [ ] Check Pusher usage trend
 - [ ] Monitor database performance
 - [ ] Plan scaling if needed
@@ -328,12 +325,9 @@ Your deployment is successful when:
 
 ## Support Resources
 
-- **Vercel Docs:** [vercel.com/docs](https://vercel.com/docs)
 - **Pusher Docs:** [pusher.com/docs](https://pusher.com/docs)
 - **Prisma Docs:** [prisma.io/docs](https://prisma.io/docs)
 - **Next.js Docs:** [nextjs.org/docs](https://nextjs.org/docs)
-
-- **Vercel Support:** [vercel.com/support](https://vercel.com/support)
 - **Pusher Support:** [support.pusher.com](https://support.pusher.com)
 
 ---

@@ -177,8 +177,8 @@ See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for complete instructions.
 
 1. Create production Pusher app
 2. Setup production database (Neon/Supabase/Railway)
-3. Deploy to Vercel: `vercel --prod`
-4. Add environment variables in Vercel dashboard
+3. Deploy to your hosting provider
+4. Add environment variables in hosting dashboard
 5. Run database migrations: `npx prisma migrate deploy`
 6. Test with two devices
 
@@ -280,7 +280,7 @@ The Computer Chess application now has production-ready real-time communication:
 - ✅ Error handling and logging
 - ✅ Production-ready configuration
 
-**The app is now ready for deployment to Vercel.**
+**The app is now ready for production deployment.**
 
 ---
 

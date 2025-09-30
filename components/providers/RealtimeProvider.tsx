@@ -45,8 +45,6 @@ export function RealtimeProvider({ matchId, children }: RealtimeProviderProps) {
       unsubscribeFromMatch(currentMatchIdRef.current);
     }
 
-    console.log(`[Realtime] Subscribing to match-${matchId}`);
-
     try {
       // Get Pusher client (will throw if env vars missing)
       getPusherClient();
@@ -62,14 +60,10 @@ export function RealtimeProvider({ matchId, children }: RealtimeProviderProps) {
         fen: string;
         timestamp: number;
       }) => {
-        console.log('[Realtime] Received opponent move:', data);
-
         // Update game state with opponent's move
         const success = makeMove(data.move);
 
-        if (success) {
-          console.log('[Realtime] Applied opponent move successfully');
-        } else {
+        if (!success) {
           console.error('[Realtime] Failed to apply opponent move');
         }
       });
@@ -80,8 +74,6 @@ export function RealtimeProvider({ matchId, children }: RealtimeProviderProps) {
         points: number;
         timestamp: number;
       }) => {
-        console.log('[Realtime] Received score update:', data);
-
         // Only update if it's the opponent's score
         if (data.userId !== session.user?.id) {
           updateOpponentScore(data.points);
@@ -100,7 +92,7 @@ export function RealtimeProvider({ matchId, children }: RealtimeProviderProps) {
         };
         timestamp: number;
       }) => {
-        console.log('[Realtime] Match started:', data);
+        // Match started event received
       });
 
       // Handle match end
@@ -111,13 +103,7 @@ export function RealtimeProvider({ matchId, children }: RealtimeProviderProps) {
         };
         timestamp: number;
       }) => {
-        console.log('[Realtime] Match ended:', data);
-        // Game end is handled by the chess logic, but we could show a notification here
-      });
-
-      // Handle subscription success
-      channel.bind('pusher:subscription_succeeded', () => {
-        console.log('[Realtime] Successfully subscribed to match channel');
+        // Game end is handled by the chess logic
       });
 
       // Handle subscription error
@@ -132,8 +118,6 @@ export function RealtimeProvider({ matchId, children }: RealtimeProviderProps) {
     // Cleanup on unmount or match change
     return () => {
       if (channelRef.current && currentMatchIdRef.current) {
-        console.log(`[Realtime] Unsubscribing from match-${currentMatchIdRef.current}`);
-
         // Unbind all events
         channelRef.current.unbind_all();
 

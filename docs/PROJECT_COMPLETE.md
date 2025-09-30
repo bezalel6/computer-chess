@@ -70,7 +70,7 @@ Successfully migrated the Computer Chess application from **Create React App + V
 - Middleware for route protection
 
 ### ✅ Production Ready
-- Vercel deployment configuration
+- Production deployment configuration
 - Environment variable management
 - Database migration scripts
 - Comprehensive documentation
@@ -101,7 +101,7 @@ Successfully migrated the Computer Chess application from **Create React App + V
 - **Stockfish.js** - Engine analysis via Web Workers
 
 ### Deployment
-- **Vercel** - Serverless hosting
+- **Hosting** - Any Node.js hosting provider
 - **PostgreSQL** - Neon/Supabase/Railway
 - **Pusher** - Managed WebSocket service
 
@@ -330,7 +330,6 @@ middleware.ts
 next.config.js
 tailwind.config.ts
 tsconfig.json
-vercel.json
 ```
 
 ### Documentation (11 files)
@@ -367,13 +366,13 @@ FILE_MANIFEST.md
 - ❌ Manual API → ✅ Server Actions (type-safe RPC)
 
 **Production**
-- ❌ No deployment → ✅ Vercel-ready
+- ❌ No deployment → ✅ Production-ready
 - ❌ No database → ✅ PostgreSQL + Prisma
 - ❌ No auth → ✅ NextAuth.js
 - ❌ No persistence → ✅ Full game history
 
 **User Experience**
-- ❌ Localhost only → ✅ Production URL
+- ❌ Localhost only → ✅ Deployable anywhere
 - ❌ P2P issues → ✅ Reliable WebSocket
 - ❌ Material-UI v5 → ✅ Tailwind + shadcn/ui (modern)
 
@@ -391,20 +390,20 @@ FILE_MANIFEST.md
 ## Cost Breakdown (Monthly)
 
 ### Free Tier (MVP)
-- **Vercel:** $0 (Hobby tier)
+- **Hosting:** $0-10 (various providers offer free tiers)
 - **Neon Database:** $0 (Free tier)
 - **Pusher:** $0 (Free tier: 100 connections)
-- **Domain:** $0 (vercel.app subdomain)
-- **Total:** $0/month
+- **Domain:** $0-12/year (optional)
+- **Total:** $0-10/month
 
 **Capacity:** ~50 concurrent users, 6,000 games/day
 
 ### Paid Tier (Growth)
-- **Vercel Pro:** $20/month (custom domain, analytics)
+- **Hosting:** $10-50/month (depending on provider)
 - **Neon Database:** $19/month (5 GB storage)
 - **Pusher Startup:** $49/month (500 connections)
 - **Domain:** $12/year
-- **Total:** ~$90/month
+- **Total:** $40-100/month
 
 **Capacity:** ~500 concurrent users, 50,000 games/day
 
@@ -485,7 +484,7 @@ All limitations are acceptable for MVP and can be addressed in future updates.
 - ✅ Accessible UI components
 
 ### Deployment Requirements
-- ✅ Vercel configuration complete
+- ✅ Production configuration complete
 - ✅ Environment variables documented
 - ✅ Database migrations ready
 - ✅ Production guide created
@@ -583,17 +582,17 @@ The Computer Chess application has been successfully migrated from Create React 
 - ✅ Real-time multiplayer (Pusher)
 - ✅ Persistent storage (PostgreSQL + Prisma)
 - ✅ Modern authentication (NextAuth.js)
-- ✅ Production deployment (Vercel-ready)
+- ✅ Production deployment ready
 - ✅ Comprehensive documentation (5,700+ lines)
 
 **Status:** 🎉 PRODUCTION READY
 
-The application is ready for immediate deployment to Vercel and can support hundreds of concurrent users on the free tier. All code is production-quality, fully typed, and thoroughly documented.
+The application is ready for immediate deployment to any Node.js hosting provider and can support hundreds of concurrent users on free tier infrastructure. All code is production-quality, fully typed, and thoroughly documented.
 
 ---
 
 **Project Location:** `E:\SharedCo\computer-chess\computer-chess-next\`
 
-**Next Step:** Deploy to Vercel using [DEPLOYMENT.md](./DEPLOYMENT.md)
+**Next Step:** Deploy to production using [DEPLOYMENT.md](./DEPLOYMENT.md)
 
 🚀 Happy chess playing!

@@ -1,10 +1,10 @@
 # Deployment Guide
 
-This guide covers deploying the Computer Chess application to Vercel with Pusher and a production database.
+This guide covers deploying the Computer Chess application to production with Pusher and a production database.
 
 ## Prerequisites
 
-- Vercel account (free tier available)
+- Node.js hosting provider account (Vercel, Railway, Render, Heroku, etc.)
 - Pusher account (free tier: 200k messages/day, 100 connections)
 - Production PostgreSQL database (Neon, Supabase, or Railway)
 - Git repository
@@ -45,35 +45,38 @@ This guide covers deploying the Computer Chess application to Vercel with Pusher
 
 This is sufficient for MVP and small-scale production use.
 
-## Step 3: Deploy to Vercel
+## Step 3: Deploy to Your Hosting Provider
 
-### Via Vercel CLI
+This Next.js application can be deployed to any hosting provider that supports Node.js applications.
 
-1. **Install Vercel CLI**
-   ```bash
-   npm install -g vercel
-   ```
+### General Deployment Steps
 
-2. **Navigate to project directory**
-   ```bash
-   cd computer-chess-next
-   ```
+1. **Choose a hosting provider** that supports Next.js/Node.js applications:
+   - Vercel (optimized for Next.js)
+   - Railway (easy setup with databases)
+   - Render (simple deployment)
+   - Heroku (classic PaaS)
+   - DigitalOcean App Platform
+   - AWS Amplify
+   - Google Cloud Run
+   - Azure App Service
 
-3. **Login to Vercel**
-   ```bash
-   vercel login
-   ```
+2. **Configure Build Settings**
 
-4. **Deploy to preview**
-   ```bash
-   vercel
-   ```
+   Ensure your hosting provider is configured with:
+   - **Framework:** Next.js
+   - **Build Command:** `npm run build` or `prisma generate && next build`
+   - **Start Command:** `npm start`
+   - **Node Version:** 20.x or higher
+   - **Install Command:** `npm install`
 
-5. **Add environment variables** (when prompted or via dashboard)
+3. **Add Environment Variables**
+
+   Configure these variables in your hosting provider's dashboard:
    ```
    DATABASE_URL="postgresql://user:password@host/database"
    NEXTAUTH_SECRET="your-nextauth-secret-use-openssl-rand-base64-32"
-   NEXTAUTH_URL="https://your-app.vercel.app"
+   NEXTAUTH_URL="https://your-production-url.com"
    PUSHER_APP_ID="your-pusher-app-id"
    PUSHER_KEY="your-pusher-key"
    PUSHER_SECRET="your-pusher-secret"
@@ -82,33 +85,17 @@ This is sufficient for MVP and small-scale production use.
    NEXT_PUBLIC_PUSHER_CLUSTER="us2"
    ```
 
-6. **Deploy to production**
-   ```bash
-   vercel --prod
-   ```
+   **Important:** Make sure `NEXT_PUBLIC_*` variables are properly exposed to the client-side build.
 
-### Via Vercel Dashboard
+4. **Connect Your Git Repository**
+   - Link your GitHub, GitLab, or Bitbucket repository
+   - Most providers auto-detect Next.js configuration
+   - Enable automatic deployments on push (optional)
 
-1. **Import Git Repository**
-   - Go to [vercel.com/new](https://vercel.com/new)
-   - Import your Git repository (GitHub, GitLab, Bitbucket)
-   - Vercel auto-detects Next.js configuration
-
-2. **Configure Build Settings**
-   - Framework: Next.js
-   - Build Command: `prisma generate && next build`
-   - Output Directory: `.next` (default)
-   - Install Command: `npm install`
-
-3. **Add Environment Variables**
-   - Go to Project Settings > Environment Variables
-   - Add all variables from `.env.example`
-   - Make sure `NEXT_PUBLIC_*` variables are checked for all environments
-
-4. **Deploy**
-   - Click "Deploy"
+5. **Deploy**
+   - Trigger initial deployment
    - Wait for build to complete
-   - Your app will be live at `https://your-project.vercel.app`
+   - Note your production URL
 
 ## Step 4: Run Database Migrations
 
@@ -176,7 +163,7 @@ After deployment, you need to run Prisma migrations on the production database:
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host/db` |
 | `NEXTAUTH_SECRET` | Secret for JWT encryption | Generate with `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | Production URL | `https://your-app.vercel.app` |
+| `NEXTAUTH_URL` | Production URL | `https://your-app.com` |
 | `PUSHER_APP_ID` | Pusher application ID | `123456` |
 | `PUSHER_KEY` | Pusher API key | `abc123def456` |
 | `PUSHER_SECRET` | Pusher API secret | `secret123` |
@@ -250,10 +237,11 @@ npx prisma migrate reset --force
 
 ## Monitoring
 
-### Vercel Dashboard
+### Hosting Provider Dashboard
+Check your hosting provider's dashboard for:
 - **Deployments:** View build logs and deployment history
-- **Analytics:** Track page views and performance
-- **Logs:** Real-time function logs (Runtime Logs tab)
+- **Analytics:** Track page views and performance (if available)
+- **Logs:** Real-time application logs
 
 ### Pusher Dashboard
 - **Debug Console:** Monitor real-time messages
@@ -277,24 +265,24 @@ npx prisma migrate reset --force
 - **Upgrade at:** ~1000 users or heavy usage
 - **Cost:** $19/month for 10GB storage
 
-### Vercel Limits
-- **Free Tier:** 100GB bandwidth, 1000 serverless function invocations/day
-- **Upgrade at:** High traffic (>10k monthly users)
-- **Cost:** $20/month for Pro plan
+### Hosting Provider Limits
+Check your hosting provider's documentation for:
+- Bandwidth and compute limits
+- Concurrent request limits
+- Pricing tiers and upgrade paths
 
 ## Rollback Procedure
 
 If deployment fails or introduces bugs:
 
 1. **Revert to previous deployment**
-   ```bash
-   vercel rollback
-   ```
+   - Consult your hosting provider's rollback documentation
+   - Most providers support rollback via CLI or dashboard
 
-2. **Or via dashboard**
+2. **Via dashboard**
    - Go to Deployments tab
    - Find previous working deployment
-   - Click "..." > "Promote to Production"
+   - Revert or promote that deployment to production
 
 3. **Database rollback** (if migrations were applied)
    ```bash
@@ -304,28 +292,27 @@ If deployment fails or introduces bugs:
 
 ## Custom Domain Setup
 
-1. **Add domain in Vercel**
-   - Go to Project Settings > Domains
+1. **Add domain via your hosting provider**
+   - Go to your hosting provider's domain settings
    - Add your custom domain
-   - Follow DNS configuration instructions
+   - Follow DNS configuration instructions provided
 
 2. **Update NEXTAUTH_URL**
-   - Change from `https://your-app.vercel.app`
+   - Change from your default deployment URL
    - To `https://yourdomain.com`
-   - Redeploy
+   - Redeploy application
 
 ## Security Best Practices
 
 - [ ] Never commit `.env.local` or environment variables to Git
 - [ ] Use strong, unique `NEXTAUTH_SECRET`
 - [ ] Rotate Pusher secret if compromised
-- [ ] Enable 2FA on Vercel, Pusher, and database accounts
+- [ ] Enable 2FA on hosting provider, Pusher, and database accounts
 - [ ] Monitor error logs for suspicious activity
 - [ ] Keep dependencies updated (`npm audit`)
 
 ## Support
 
-- **Vercel Docs:** [vercel.com/docs](https://vercel.com/docs)
 - **Pusher Docs:** [pusher.com/docs](https://pusher.com/docs)
 - **Prisma Docs:** [prisma.io/docs](https://prisma.io/docs)
 - **Next.js Docs:** [nextjs.org/docs](https://nextjs.org/docs)

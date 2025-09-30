@@ -275,11 +275,20 @@ export async function submitMove(
 }
 
 /**
- * Update player score
+ * Update player score with challenge completion data
  */
 export async function updateScore(
   gameId: string,
-  points: number
+  points: number,
+  challengeData?: {
+    challengeName: string;
+    challengeType: string;
+    difficulty: string;
+    completed: boolean;
+    streakCount: number;
+    comboSize: number;
+    moveNumber: number;
+  }
 ): Promise<{ success: boolean; error?: string }> {
   const session = await auth();
 
@@ -288,9 +297,65 @@ export async function updateScore(
   }
 
   try {
-    // In a real implementation, you'd update the player's total score
-    // For now, this is just a placeholder
-    console.log(`User ${session.user.id} scored ${points} points in game ${gameId}`);
+    const game = await prisma.game.findUnique({
+      where: { id: gameId },
+      select: {
+        whitePlayerId: true,
+        blackPlayerId: true,
+        whiteScore: true,
+        blackScore: true,
+        whiteLongestStreak: true,
+        blackLongestStreak: true,
+      },
+    });
+
+    if (!game) {
+      return { success: false, error: 'Game not found' };
+    }
+
+    const isWhite = game.whitePlayerId === session.user.id;
+
+    // Update game score
+    await prisma.game.update({
+      where: { id: gameId },
+      data: isWhite
+        ? {
+            whiteScore: game.whiteScore + points,
+            whiteLongestStreak: challengeData
+              ? Math.max(game.whiteLongestStreak, challengeData.streakCount)
+              : game.whiteLongestStreak,
+            whiteChallengesCompleted: challengeData?.completed
+              ? { increment: 1 }
+              : undefined,
+          }
+        : {
+            blackScore: game.blackScore + points,
+            blackLongestStreak: challengeData
+              ? Math.max(game.blackLongestStreak, challengeData.streakCount)
+              : game.blackLongestStreak,
+            blackChallengesCompleted: challengeData?.completed
+              ? { increment: 1 }
+              : undefined,
+          },
+    });
+
+    // Record challenge completion if data provided
+    if (challengeData) {
+      await prisma.challengeCompletion.create({
+        data: {
+          gameId,
+          playerId: session.user.id,
+          moveNumber: challengeData.moveNumber,
+          challengeName: challengeData.challengeName,
+          challengeType: challengeData.challengeType,
+          difficulty: challengeData.difficulty as any,
+          completed: challengeData.completed,
+          pointsAwarded: points,
+          streakCount: challengeData.streakCount,
+          comboSize: challengeData.comboSize,
+        },
+      });
+    }
 
     // Trigger real-time score update for opponent
     try {

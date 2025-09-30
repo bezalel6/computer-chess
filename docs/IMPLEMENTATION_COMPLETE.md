@@ -296,9 +296,9 @@ public/
 
 ## Deployment Instructions
 
-### Vercel Deployment (Recommended)
+### Production Deployment
 
-1. **Push to GitHub:**
+1. **Push to Git Repository:**
    ```bash
    git init
    git add .
@@ -307,23 +307,23 @@ public/
    git push -u origin main
    ```
 
-2. **Deploy to Vercel:**
-   ```bash
-   npm i -g vercel
-   vercel
-   ```
+2. **Choose Your Hosting Provider:**
+   Select a Node.js hosting provider (Vercel, Railway, Render, Heroku, etc.)
 
 3. **Configure Environment:**
-   - Add `DATABASE_URL` from Vercel Postgres
-   - Add `NEXTAUTH_SECRET`: `openssl rand -base64 32`
-   - Add `NEXTAUTH_URL`: Your deployment URL
+   Add these environment variables via your hosting provider's dashboard:
+   - `DATABASE_URL` from your PostgreSQL provider
+   - `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32`
+   - `NEXTAUTH_URL`: Your production URL
+   - All Pusher credentials
 
 4. **Deploy:**
-   ```bash
-   vercel --prod
-   ```
+   Follow your hosting provider's deployment process:
+   - Connect Git repository
+   - Configure build settings (Build: `npm run build`, Start: `npm start`)
+   - Trigger deployment
 
-### Alternative: Railway
+### Example: Railway
 
 1. Create Railway project
 2. Connect GitHub repository

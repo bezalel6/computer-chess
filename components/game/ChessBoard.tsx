@@ -100,10 +100,15 @@ export function ChessBoardComponent({ onMoveMade }: ChessBoardProps) {
       play('gameOver');
     }
 
-    // Check challenges
+    // Check challenges and award points
     const move = game.history({ verbose: true }).slice(-1)[0];
     if (move) {
-      checkChallenges(move, isGameOver());
+      const pointsAwarded = checkChallenges(move, isGameOver());
+
+      // Update score on server if points were awarded
+      if (pointsAwarded > 0 && onMoveMade) {
+        // This will be handled by the parent component
+      }
     }
 
     // Notify parent

@@ -503,7 +503,7 @@ Strict mode enabled with path aliases:
 
 ## Deployment
 
-The application is ready for production deployment on Vercel. See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for complete instructions.
+The application is ready for production deployment. See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for complete instructions.
 
 ### Quick Deployment Steps
 
@@ -515,17 +515,15 @@ The application is ready for production deployment on Vercel. See **[DEPLOYMENT.
    - Create Pusher Channels app
    - Note credentials (App ID, Key, Secret, Cluster)
 
-3. **Deploy to Vercel**
-   ```bash
-   npm install -g vercel
-   cd computer-chess-next
-   vercel
-   ```
+3. **Choose Hosting Provider**
+   - Select a Node.js hosting provider (Vercel, Railway, Render, etc.)
+   - Install provider's CLI if available
 
-4. **Add Environment Variables in Vercel**
+4. **Add Environment Variables**
+   Configure these in your hosting provider's dashboard:
    - DATABASE_URL
    - NEXTAUTH_SECRET (generate with `openssl rand -base64 32`)
-   - NEXTAUTH_URL
+   - NEXTAUTH_URL (your production URL)
    - All Pusher credentials
 
 5. **Run Database Migrations**
@@ -535,9 +533,7 @@ The application is ready for production deployment on Vercel. See **[DEPLOYMENT.
    ```
 
 6. **Deploy to Production**
-   ```bash
-   vercel --prod
-   ```
+   Follow your hosting provider's deployment process
 
 ### Post-Deployment Testing
 
@@ -855,7 +851,7 @@ npm run dev
 - [ ] Performance optimization
 
 ### 🔲 Phase 6: Deployment
-- [ ] Configure Vercel deployment
+- [ ] Configure production deployment
 - [ ] Set up production database
 - [ ] Configure environment variables
 - [ ] Add error tracking (Sentry)

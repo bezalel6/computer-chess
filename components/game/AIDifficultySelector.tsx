@@ -15,12 +15,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { startAIGame, type AIDifficulty } from '@/app/actions/ai-game';
+import { startAIGame } from '@/app/actions/ai-game';
 import { useRouter } from 'next/navigation';
+import type { AIDifficulty } from '@prisma/client';
 
 interface AIDifficultySelectorProps {
   open: boolean;
   onClose: () => void;
+  onStartGame?: (difficulty: AIDifficulty, playerColor: 'white' | 'black') => void | Promise<void>;
 }
 
 interface DifficultyLevel {
@@ -72,7 +74,7 @@ const difficulties: DifficultyLevel[] = [
   },
 ];
 
-export function AIDifficultySelector({ open, onClose }: AIDifficultySelectorProps) {
+export function AIDifficultySelector({ open, onClose, onStartGame }: AIDifficultySelectorProps) {
   const [starting, setStarting] = useState(false);
   const [selectedColor, setSelectedColor] = useState<'white' | 'black'>('white');
   const router = useRouter();
@@ -81,14 +83,21 @@ export function AIDifficultySelector({ open, onClose }: AIDifficultySelectorProp
     setStarting(true);
 
     try {
-      const result = await startAIGame(difficulty, selectedColor);
-
-      if (result.success && result.game) {
-        // Navigate to game
-        router.push(`/play?gameId=${result.game.id}`);
+      // If parent provides onStartGame, use that instead
+      if (onStartGame) {
+        await onStartGame(difficulty, selectedColor);
         onClose();
       } else {
-        alert(result.error || 'Failed to start AI game');
+        // Fallback to default behavior
+        const result = await startAIGame(difficulty, selectedColor);
+
+        if (result.success && result.game) {
+          // Navigate to game
+          router.push(`/play?gameId=${result.game.id}`);
+          onClose();
+        } else {
+          alert(result.error || 'Failed to start AI game');
+        }
       }
     } catch (error) {
       console.error('Error starting AI game:', error);
@@ -104,7 +113,7 @@ export function AIDifficultySelector({ open, onClose }: AIDifficultySelectorProp
         <DialogHeader>
           <DialogTitle className="text-2xl">Play vs AI</DialogTitle>
           <DialogDescription>
-            Choose your opponent's difficulty level and your color
+            Choose your opponent&apos;s difficulty level and your color
           </DialogDescription>
         </DialogHeader>
 

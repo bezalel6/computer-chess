@@ -9,9 +9,9 @@
 import { auth } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
 import { Chess } from 'chess.ts';
-import { getStockfishManager, type AIDifficulty } from '@/lib/stockfish/worker-manager';
-
-export type { AIDifficulty };
+import { getStockfishManager } from '@/lib/stockfish/worker-manager';
+import { getAIOpponentName, getAIDifficultyMultiplier } from '@/lib/ai/helpers';
+import type { AIDifficulty } from '@prisma/client';
 
 export interface AIGameResult {
   success: boolean;
@@ -19,7 +19,7 @@ export interface AIGameResult {
     id: string;
     playerColor: 'white' | 'black';
     aiDifficulty: AIDifficulty;
-    fen: string;
+    currentFen: string;
   };
   error?: string;
 }
@@ -35,31 +35,6 @@ export interface AIMoveResult {
   error?: string;
 }
 
-/**
- * Get XP multiplier for AI difficulty
- */
-export function getAIDifficultyMultiplier(difficulty: AIDifficulty): number {
-  const multipliers: Record<AIDifficulty, number> = {
-    BEGINNER: 0.5,
-    INTERMEDIATE: 0.75,
-    ADVANCED: 1.0,
-    MASTER: 1.25,
-  };
-  return multipliers[difficulty];
-}
-
-/**
- * Get AI opponent display name
- */
-export function getAIOpponentName(difficulty: AIDifficulty): string {
-  const names: Record<AIDifficulty, string> = {
-    BEGINNER: '🤖 AI Rookie (800)',
-    INTERMEDIATE: '🤖 AI Player (1200)',
-    ADVANCED: '🤖 AI Expert (1800)',
-    MASTER: '🤖 AI Grandmaster (2400)',
-  };
-  return names[difficulty];
-}
 
 /**
  * Start a new AI game
@@ -78,11 +53,28 @@ export async function startAIGame(
     const userId = session.user.id;
     const initialFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
+    // Get or create AI system user
+    let aiUser = await prisma.user.findFirst({
+      where: {
+        username: 'AI_SYSTEM',
+        isGuest: true,
+      },
+    });
+
+    if (!aiUser) {
+      aiUser = await prisma.user.create({
+        data: {
+          username: 'AI_SYSTEM',
+          isGuest: true,
+        },
+      });
+    }
+
     // Create game with player and AI
     const game = await prisma.game.create({
       data: {
-        whitePlayerId: playerColor === 'white' ? userId : userId, // Use same user for both for now
-        blackPlayerId: playerColor === 'black' ? userId : userId,
+        whitePlayerId: playerColor === 'white' ? userId : aiUser.id,
+        blackPlayerId: playerColor === 'black' ? userId : aiUser.id,
         status: 'IN_PROGRESS',
         initialFen,
         currentFen: initialFen,
@@ -131,7 +123,7 @@ export async function startAIGame(
               id: game.id,
               playerColor,
               aiDifficulty: difficulty,
-              fen: newFen,
+              currentFen: newFen,
             },
           };
         }
@@ -147,7 +139,7 @@ export async function startAIGame(
         id: game.id,
         playerColor,
         aiDifficulty: difficulty,
-        fen: initialFen,
+        currentFen: initialFen,
       },
     };
   } catch (error) {

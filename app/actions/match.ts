@@ -15,6 +15,7 @@ import {
   triggerMatchStart,
   triggerChallenge,
 } from '@/lib/realtime/pusher-server';
+import {GameStatus} from '@prisma/client'
 
 export interface MatchResult {
   success: boolean;
@@ -22,7 +23,7 @@ export interface MatchResult {
     id: string;
     white: string;
     black: string;
-    fen: string;
+    currentFen: string;
   };
   error?: string;
 }
@@ -79,12 +80,12 @@ export async function findRandomMatch(): Promise<MatchResult> {
       // Get usernames
       const whiteUser = await prisma.user.findUnique({
         where: { id: whiteUserId },
-        select: { name: true },
+        select: { username: true },
       });
 
       const blackUser = await prisma.user.findUnique({
         where: { id: blackUserId },
-        select: { name: true },
+        select: { username: true },
       });
 
       if (!whiteUser || !blackUser) {
@@ -96,8 +97,8 @@ export async function findRandomMatch(): Promise<MatchResult> {
         data: {
           whitePlayerId: whiteUserId,
           blackPlayerId: blackUserId,
-          status: 'active',
-          fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+          status: GameStatus.WAITING,
+          currentFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         },
       });
 
@@ -112,11 +113,11 @@ export async function findRandomMatch(): Promise<MatchResult> {
       try {
         await triggerMatchStart(game.id, {
           id: game.id,
-          white: whiteUser.name || 'White',
-          black: blackUser.name || 'Black',
+          white: whiteUser.username || 'White',
+          black: blackUser.username || 'Black',
           whitePlayerId: whiteUserId,
           blackPlayerId: blackUserId,
-          fen: game.fen,
+          fen: game.currentFen,
         });
       } catch (error) {
         console.error('Error triggering match start:', error);
@@ -127,9 +128,9 @@ export async function findRandomMatch(): Promise<MatchResult> {
         success: true,
         match: {
           id: game.id,
-          white: whiteUser.name || 'White',
-          black: blackUser.name || 'Black',
-          fen: game.fen,
+          white: whiteUser.username || 'White',
+          black: blackUser.username || 'Black',
+          currentFen: game.currentFen,
         },
       };
     } else {
@@ -164,7 +165,7 @@ export async function challengeUser(targetUsername: string): Promise<MatchResult
   try {
     // Find target user
     const targetUser = await prisma.user.findUnique({
-      where: { name: targetUsername },
+      where: { username: targetUsername },
     });
 
     if (!targetUser) {
@@ -180,6 +181,8 @@ export async function challengeUser(targetUsername: string): Promise<MatchResult
       data: {
         challengerId: session.user.id,
         challengedId: targetUser.id,
+        challengerColor: 'white',
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
       },
     });
 
@@ -187,7 +190,7 @@ export async function challengeUser(targetUsername: string): Promise<MatchResult
     try {
       await triggerChallenge(targetUser.id, {
         id: challenge.id,
-        challengerName: session.user.name || 'Unknown',
+        challengerName: session.user.username || 'Unknown',
         challengerId: session.user.id,
       });
     } catch (error) {
@@ -236,9 +239,14 @@ export async function submitMove(
       return { success: false, error: 'You are not a player in this game' };
     }
 
-    if (game.status !== 'active') {
+    if (game.status === 'COMPLETED' || game.status === 'ABANDONED') {
       return { success: false, error: 'Game is not active' };
     }
+
+    // Get move number
+    const moveCount = await prisma.move.count({
+      where: { gameId },
+    });
 
     // Record the move
     await prisma.move.create({
@@ -247,14 +255,15 @@ export async function submitMove(
         from: move.from,
         to: move.to,
         promotion: move.promotion || null,
-        fen: newFen,
+        fenAfterMove: newFen,
+        moveNumber: moveCount + 1,
       },
     });
 
     // Update game FEN
     await prisma.game.update({
       where: { id: gameId },
-      data: { fen: newFen },
+      data: { currentFen: newFen, lastActivityAt: new Date() },
     });
 
     // Trigger real-time move event for opponent

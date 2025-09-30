@@ -10,6 +10,7 @@ import { auth } from '@/lib/auth/config';
 import { prisma } from '@/lib/db/prisma';
 import { calculateEndGameBonuses, calculateXPEarned, getRank } from '@/lib/economy/progression';
 import type { Rank } from '@/lib/economy/progression';
+import { getAIDifficultyMultiplier } from '@/lib/ai/helpers';
 
 export interface EndGameResult {
   success: boolean;
@@ -83,7 +84,13 @@ export async function completeGame(
     );
 
     // Calculate XP
-    const xpEarned = calculateXPEarned(playerScore, bonuses);
+    let xpEarned = calculateXPEarned(playerScore, bonuses);
+
+    // Apply AI difficulty multiplier if it's an AI game
+    if (game.isAIGame && game.aiDifficulty) {
+      const multiplier = getAIDifficultyMultiplier(game.aiDifficulty);
+      xpEarned = Math.round(xpEarned * multiplier);
+    }
 
     // Update user stats
     const currentUser = await prisma.user.findUnique({

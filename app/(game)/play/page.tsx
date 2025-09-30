@@ -13,17 +13,26 @@ import { ChessBoardComponent } from '@/components/game/ChessBoard';
 import { LeftPanel } from '@/components/panels/LeftPanel';
 import { RightPanel } from '@/components/panels/RightPanel';
 import { RealtimeProvider } from '@/components/providers/RealtimeProvider';
+import { AIDifficultySelector } from '@/components/game/AIDifficultySelector';
+import { AIThinkingIndicator } from '@/components/game/AIThinkingIndicator';
 import { useGameStore } from '@/stores/gameStore';
 import { useChallengeStore } from '@/stores/challengeStore';
 import { useSound } from '@/hooks/useSound';
 import { findRandomMatch, challengeUser, submitMove } from '@/app/actions/match';
+import { startAIGame, getAIMove } from '@/app/actions/ai-game';
+import { getAIOpponentName } from '@/lib/ai/helpers';
 import { createChallenges } from '@/lib/chess/challenge-maker';
 import { Chess } from 'chess.ts';
+import type { AIDifficulty } from '@prisma/client';
 
 export default function PlayPage() {
   const { data: session, status } = useSession();
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [showAISelector, setShowAISelector] = useState(false);
+  const [isAIThinking, setIsAIThinking] = useState(false);
+  const [isAIGame, setIsAIGame] = useState(false);
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty | null>(null);
 
   const game = useGameStore((state) => state.game);
   const startNewGame = useGameStore((state) => state.startNewGame);
@@ -71,7 +80,7 @@ export default function PlayPage() {
 
       if (result.success && result.match) {
         // Match found! Start the game
-        const myUsername = session.user?.name || 'You';
+        const myUsername = session?.user?.username || 'You';
         const myColor =
           result.match.white === myUsername ? 'white' : 'black';
 
@@ -108,7 +117,7 @@ export default function PlayPage() {
 
       if (result.success && result.match) {
         // Match created
-        const myUsername = session.user?.name || 'You';
+        const myUsername = session?.user?.username || 'You';
         const myColor =
           result.match.white === myUsername ? 'white' : 'black';
 
@@ -129,6 +138,44 @@ export default function PlayPage() {
     }
   }
 
+  async function handleStartAIGame(difficulty: AIDifficulty, playerColor: 'white' | 'black') {
+    setShowAISelector(false);
+    setSearchError(null);
+
+    try {
+      const result = await startAIGame(difficulty, playerColor);
+
+      if (result.success && result.game) {
+        setIsAIGame(true);
+        setAiDifficulty(difficulty);
+
+        const aiName = getAIOpponentName(difficulty);
+        const whiteName = playerColor === 'white' ? (session?.user?.username || 'You') : aiName;
+        const blackName = playerColor === 'black' ? (session?.user?.username || 'You') : aiName;
+
+        startNewGame(
+          result.game.id,
+          whiteName,
+          blackName,
+          playerColor
+        );
+
+        // Load AI's first move if player is black
+        if (playerColor === 'black' && result.game.currentFen) {
+          game.load(result.game.currentFen);
+        }
+
+        play('start');
+        await generateChallenges();
+      } else {
+        setSearchError(result.error || 'Failed to start AI game');
+      }
+    } catch (error) {
+      console.error('Error starting AI game:', error);
+      setSearchError('Failed to start AI game');
+    }
+  }
+
   async function handleMoveMade(move: {
     from: string;
     to: string;
@@ -143,9 +190,38 @@ export default function PlayPage() {
 
       if (!result.success) {
         console.error('Failed to submit move:', result.error);
+        return;
       }
 
-      // Move is now automatically synced via Pusher real-time events
+      // If AI game, trigger AI response
+      if (isAIGame && !isGameOver()) {
+        setIsAIThinking(true);
+
+        // Short delay for better UX
+        setTimeout(async () => {
+          try {
+            const aiMoveResult = await getAIMove(currentMatch.id);
+
+            if (aiMoveResult.success && aiMoveResult.move && aiMoveResult.newFen) {
+              // Update game state with AI move
+              game.load(aiMoveResult.newFen);
+              play('move');
+              setIsAIThinking(false);
+
+              // Generate new challenges for player's next turn
+              await generateChallenges();
+            } else {
+              console.error('AI move failed:', aiMoveResult.error);
+              setIsAIThinking(false);
+            }
+          } catch (error) {
+            console.error('Error getting AI move:', error);
+            setIsAIThinking(false);
+          }
+        }, 1500);
+      }
+
+      // Move is now automatically synced via Pusher real-time events for multiplayer
     } catch (error) {
       console.error('Error submitting move:', error);
     }
@@ -163,7 +239,7 @@ export default function PlayPage() {
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-400">Signed in as</p>
-            <p className="font-semibold">{session.user?.name}</p>
+            <p className="font-semibold">{session?.user?.username}</p>
           </div>
         </div>
       </header>
@@ -188,11 +264,11 @@ export default function PlayPage() {
                 <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
                   <h2 className="text-2xl font-bold mb-2">Game Over</h2>
                   <p className="text-gray-400 mb-4">
-                    {game.isCheckmate()
+                    {game.inCheckmate()
                       ? `Checkmate! ${game.turn() === 'w' ? 'Black' : 'White'} wins!`
-                      : game.isStalemate()
+                      : game.inStalemate()
                       ? 'Stalemate!'
-                      : game.isDraw()
+                      : game.inDraw()
                       ? 'Draw!'
                       : 'Game ended'}
                   </p>
@@ -212,7 +288,17 @@ export default function PlayPage() {
             <RightPanel
               onFindMatch={handleFindMatch}
               onChallengeUser={handleChallengeUser}
+              onPlayAI={() => setShowAISelector(true)}
+              isAIGame={isAIGame}
+              aiDifficulty={aiDifficulty}
             />
+
+            {/* AI Thinking Indicator */}
+            {isAIThinking && aiDifficulty && (
+              <div className="mt-4">
+                <AIThinkingIndicator aiName={getAIOpponentName(aiDifficulty)} />
+              </div>
+            )}
 
             {/* Search Status */}
             {isSearching && (
@@ -235,6 +321,13 @@ export default function PlayPage() {
           </div>
         </div>
       </main>
+
+      {/* AI Difficulty Selector Modal */}
+      <AIDifficultySelector
+        open={showAISelector}
+        onClose={() => setShowAISelector(false)}
+        onStartGame={handleStartAIGame}
+      />
     </div>
     </RealtimeProvider>
   );

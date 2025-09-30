@@ -2,7 +2,6 @@
 
 A modern multiplayer chess application with dynamic challenges, real-time gameplay, and move analysis powered by Stockfish.
 
-**Status:** ✅ Production Ready | 🚀 [Deploy to Vercel](./DEPLOYMENT.md)
 
 ## Features
 
@@ -43,7 +42,7 @@ A modern multiplayer chess application with dynamic challenges, real-time gamepl
 
 1. **Clone and navigate:**
    ```bash
-   cd computer-chess-next
+   cd computer-chess
    ```
 
 2. **Install dependencies:**
